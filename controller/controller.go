@@ -134,15 +134,15 @@ func NewLocationController(s *mgo.Session) *LocationController {
 func getGeoLocation(addr string) Output{
 	//create a client to get data from Google Maps
 	client := &http.Client{}
-	//fmt.Println(addr)
+
 	req_URL := "http://maps.google.com/maps/api/geocode/json?address="
 	req_URL += url.QueryEscape(addr)
-	//fmt.Println("req_URL", req_URL)
+
 	req_URL += "&sensor=false";
 	fmt.Println("Request URL :: ", req_URL)
 
 	request, err := http.NewRequest("GET", req_URL , nil)
-	//sending a http request
+
 	response, err := client.Do(request)
 	if err != nil {
 		fmt.Println("Error while calling Google Maps API :: ", err);
@@ -263,11 +263,9 @@ func (uc LocationController) CreateTrip(w http.ResponseWriter, r *http.Request, 
 		    	loc_Lang := o.Coordinates.Longitude
 
 		    	getUberResponse := uberService.GetUberRate(start_Lat, start_Lang, loc_Lat, loc_Lang)
-		    //	fmt.Println("Uber Response is :: ", getUberResponse.Cost, getUberResponse.Duration, getUberResponse.Distance );
-		    	cost_array = append(cost_array, getUberResponse.Cost)
+					distance_array = append(distance_array, getUberResponse.Distance)
+					cost_array = append(cost_array, getUberResponse.Cost)
 		    	duration_array = append(duration_array, getUberResponse.Duration)
-		    	distance_array = append(distance_array, getUberResponse.Distance)
-
 			}
 			fmt.Println("Cost Array", cost_array)
 
@@ -329,13 +327,10 @@ func (uc LocationController) CreateTrip(w http.ResponseWriter, r *http.Request, 
 	tO.Total_distance = distance_total + getUberResponse_last.Distance
 	tO.Total_uber_duration = duration_total + getUberResponse_last.Duration
 
-
-	// Write the user to mongo
 	uc.session.DB("cmpe273").C("UberTrips").Insert(tO)
 
-	// Marshal provided interface into JSON structure
 	uj, _ := json.Marshal(tO)
-	// Write content-type, statuscode, payload
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
 	fmt.Fprintf(w, "%s", uj)
@@ -352,20 +347,19 @@ type Internal_data struct{
 func (uc LocationController) GetTrip(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	// Grab id
 	id := p.ByName("trip_id")
-	// fmt.Println(id)
+
 	if !bson.IsObjectIdHex(id) {
         w.WriteHeader(404)
         return
     }
 
-    // Grab id
     oid := bson.ObjectIdHex(id)
 	var tO TripPostOutput
 	if err := uc.session.DB("cmpe273").C("UberTrips").FindId(oid).One(&tO); err != nil {
         w.WriteHeader(404)
         return
     }
-	// Marshal provided interface into JSON structure
+
 	uj, _ := json.Marshal(tO)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -399,14 +393,12 @@ func (uc LocationController) UpdateTrip(w http.ResponseWriter, r *http.Request, 
     fmt.Println("The route array is: ", theStruct.trip_route)
     theStruct.trip_visits = make(map[string]int)
 
-    // theStruct.trip_route = list_location_ids
     var trip_visited []string
     var trip_not_visited []string
 
   	if err := uc.session.DB("cmpe273").C("Trip_Temp").FindId(id).One(&internal); err != nil {
     	for index, loc := range theStruct.trip_route{
-    		if index == 0{
-    		// fmt.Println("Coming here.....................")
+    		if index == 0 {
     			theStruct.trip_visits[loc] = 1
     			trip_visited = append(trip_visited, loc)
     		}else{
@@ -436,11 +428,8 @@ func (uc LocationController) UpdateTrip(w http.ResponseWriter, r *http.Request, 
 
   	last_index := len(theStruct.trip_route) - 1
   	trip_completed := internal.Trip_completed
-  	// last_elem = theStruct.trip_route[last_index]
-  		// fmt.Println("Trip completed ==", trip_completed)
   	if trip_completed == 1 {
   		fmt.Println("Entering the trip completed if statement")
-  		// tpost.Status = "completed"
   		tPO.Status = "completed"
 
 		uj, _ := json.Marshal(tPO)
@@ -491,8 +480,8 @@ func (uc LocationController) UpdateTrip(w http.ResponseWriter, r *http.Request, 
 	  			tPO.Uber_wait_time_eta = eta
 	  		}
 
-	  		fmt.Println("Starting Location: ", tPO.Starting_from_location_id)
-	  		fmt.Println("Next destination: ", tPO.Next_destination_location_id)
+	  		fmt.Println("Starting Location :: ", tPO.Starting_from_location_id)
+	  		fmt.Println("Next destination :: ", tPO.Next_destination_location_id)
 	  		theStruct.trip_visits[location] = 1
 	  		if i == last_index {
 	  			theStruct.trip_visits[theStruct.trip_route[0]] = 0
@@ -534,25 +523,20 @@ func (uc LocationController) UpdateTrip(w http.ResponseWriter, r *http.Request, 
 
 // RemoveLocation removes an existing location resource
 func (uc LocationController) RemoveLocation(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	// Grab id
 	id := p.ByName("location_id")
-	// fmt.Println(id)
 
-	// Verify id is ObjectId, otherwise bail
 	if !bson.IsObjectIdHex(id) {
 		w.WriteHeader(404)
 		return
 	}
-	// Grab id
+
 	oid := bson.ObjectIdHex(id)
 
-	// Remove user
 	if err := uc.session.DB("cmpe273").C("GeoLocations").RemoveId(oid); err != nil {
 		w.WriteHeader(404)
 		return
 	}
 
-	// Write status
 	w.WriteHeader(200)
 }
 
@@ -562,7 +546,7 @@ func (uc LocationController) UpdateLocation(w http.ResponseWriter, r *http.Reque
 	var o Output
 
 	id := p.ByName("location_id")
-	// fmt.Println(id)
+
 	if !bson.IsObjectIdHex(id) {
         w.WriteHeader(404)
         return
@@ -577,7 +561,7 @@ func (uc LocationController) UpdateLocation(w http.ResponseWriter, r *http.Reque
 	json.NewDecoder(r.Body).Decode(&i)
 
 	googResCoor := getGeoLocation(i.Address + "+" + i.City + "+" + i.State + "+" + i.Zipcode);
-    fmt.Println("resp is: ", googResCoor.Coordinates.Latitude, googResCoor.Coordinates.Longitude);
+    fmt.Println("Response is :: ", googResCoor.Coordinates.Latitude, googResCoor.Coordinates.Longitude);
 
 
 	o.Address = i.Address
@@ -587,7 +571,6 @@ func (uc LocationController) UpdateLocation(w http.ResponseWriter, r *http.Reque
 	o.Coordinates.Latitude = googResCoor.Coordinates.Latitude
 	o.Coordinates.Longitude = googResCoor.Coordinates.Longitude
 
-	// Write the user to mongo
 	c := uc.session.DB("cmpe273").C("GeoLocations")
 
 	id2 := bson.M{"_id": oid}
@@ -596,10 +579,8 @@ func (uc LocationController) UpdateLocation(w http.ResponseWriter, r *http.Reque
 		panic(err)
 	}
 
-	// Marshal provided interface into JSON structure
 	uj, _ := json.Marshal(o)
 
-	// Write content-type, statuscode, payload
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
 	fmt.Fprintf(w, "%s", uj)

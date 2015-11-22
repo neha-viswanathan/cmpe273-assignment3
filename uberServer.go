@@ -44,7 +44,7 @@ func main() {
 	route.DELETE("/locations/:location_id", locCtrl.RemoveLocation)
 
 	// Start server
-	http.ListenAndServe("localhost:1111", route)
+	http.ListenAndServe("localhost:8080", route)
 }
 
 // getSession function creates a new mongo session and panics if connection error occurs
